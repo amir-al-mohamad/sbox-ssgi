@@ -1,3 +1,31 @@
+# s&box with screen space global illumination
+
+![](docs/ssgi/lamp.png)
+![](docs/ssgi/neon.png)
+
+## Using it
+
+- Add the **Global Illumination (SSGI)** component to a camera, next to the other post processing effects.
+- Pick the level in Settings -> Graphics -> Post processing -> Screen Space Global Illumination, or with
+  `r_ssgi_quality 0..3` (off, low, medium, high).
+- `r_ssgi_debug 1` shows the bounced light on its own. (needs sv_cheats 1)
+- The component's `Intensity` (0 to 2) scales the bounce and blends through post process volumes.
+
+## Building
+
+The same as upstream: run `Setup.bat` once, then
+
+```bash
+dotnet run --project engine/Tools/SboxBuild/SboxBuild.csproj -- build --config Developer
+dotnet run --project engine/Tools/SboxBuild/SboxBuild.csproj -- build-shaders
+```
+
+`build-shaders` has to come after `build`. The build restores Facepunch's prebuilt compiled shaders, which don't have
+the lighting hook, and `build-shaders` compiles them again from this source. The first time takes about 20 minutes,
+because every lit shader includes the changed lighting code.
+
+---
+
 <div align="center">
   <img src="https://sbox.game/img/sbox-logo-square.svg" width="80px" alt="s&box logo">
 
