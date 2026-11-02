@@ -42,6 +42,19 @@ public partial class RenderSettings
 	}
 
 	/// <summary>
+	/// Light bounced off what's on screen. Levels trace more rays and borrow from more neighbours.
+	/// </summary>
+	public EffectQuality ScreenSpaceGlobalIlluminationQuality
+	{
+		get => Valid( VideoSettings.Get<EffectQuality>( "postprocess.ssgi", EffectQuality.High ) );
+		set
+		{
+			VideoSettings.Set<EffectQuality>( "postprocess.ssgi", value );
+			Config.SetGroupConVars( "ScreenSpaceGlobalIlluminationQuality", value.ToString() );
+		}
+	}
+
+	/// <summary>
 	/// How many samples motion blur takes, and whether it runs at all.
 	/// </summary>
 	public EffectQuality MotionBlurQuality
@@ -86,6 +99,7 @@ public partial class RenderSettings
 		EffectQuality AmbientOcclusion,
 		EffectQuality DepthOfField,
 		EffectQuality ScreenSpaceReflections,
+		EffectQuality ScreenSpaceGlobalIllumination,
 		EffectQuality MotionBlur,
 		bool Bloom );
 
@@ -102,7 +116,7 @@ public partial class RenderSettings
 	{
 		var level = EffectLevelFor( preset );
 
-		return new( level, level, SsrLevel( level ), level, preset != PostProcessQuality.Off );
+		return new( level, level, SsrLevel( level ), level, level, preset != PostProcessQuality.Off );
 	}
 
 	/// <summary>
@@ -118,6 +132,7 @@ public partial class RenderSettings
 			[nameof( AmbientOcclusionQuality )] = effects.AmbientOcclusion.ToString(),
 			[nameof( DepthOfFieldQuality )] = effects.DepthOfField.ToString(),
 			[nameof( ScreenSpaceReflectionQuality )] = effects.ScreenSpaceReflections.ToString(),
+			[nameof( ScreenSpaceGlobalIlluminationQuality )] = effects.ScreenSpaceGlobalIllumination.ToString(),
 			[nameof( MotionBlurQuality )] = effects.MotionBlur.ToString(),
 			[nameof( BloomEnabled )] = effects.Bloom.ToString()
 		};
@@ -127,7 +142,7 @@ public partial class RenderSettings
 		[PostProcessQuality.Off, PostProcessQuality.Low, PostProcessQuality.Medium, PostProcessQuality.High];
 
 	PostProcessValues CurrentPostProcessValues => new(
-		AmbientOcclusionQuality, DepthOfFieldQuality, ScreenSpaceReflectionQuality, MotionBlurQuality, BloomEnabled );
+		AmbientOcclusionQuality, DepthOfFieldQuality, ScreenSpaceReflectionQuality, ScreenSpaceGlobalIlluminationQuality, MotionBlurQuality, BloomEnabled );
 
 	/// <summary>
 	/// What the individual effects add up to, or <see cref="PostProcessQuality.Custom"/>. Derived
@@ -158,6 +173,7 @@ public partial class RenderSettings
 			AmbientOcclusionQuality = values.AmbientOcclusion;
 			DepthOfFieldQuality = values.DepthOfField;
 			ScreenSpaceReflectionQuality = values.ScreenSpaceReflections;
+			ScreenSpaceGlobalIlluminationQuality = values.ScreenSpaceGlobalIllumination;
 			MotionBlurQuality = values.MotionBlur;
 			BloomEnabled = values.Bloom;
 		}

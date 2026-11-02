@@ -85,6 +85,25 @@
             "r_ssr_downsample_ratio": "2"
         }
     },
+    "ScreenSpaceGlobalIlluminationQuality":
+    {
+        "Off":
+        {
+            "r_ssgi_quality": "0"
+        },
+        "Low":
+        {
+            "r_ssgi_quality": "1"
+        },
+        "Medium":
+        {
+            "r_ssgi_quality": "2"
+        },
+        "High":
+        {
+            "r_ssgi_quality": "3"
+        }
+    },
     "MotionBlurQuality":
     {
         "Low":

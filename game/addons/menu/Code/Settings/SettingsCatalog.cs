@@ -156,6 +156,7 @@ public class SettingsCatalog
 		["AmbientOcclusionQuality"] = "gfx.ao",
 		["DepthOfFieldQuality"] = "gfx.dof",
 		["ScreenSpaceReflectionQuality"] = "gfx.ssr",
+		["ScreenSpaceGlobalIlluminationQuality"] = "gfx.ssgi",
 		["MotionBlurQuality"] = "gfx.motionblur_quality",
 		["BloomEnabled"] = "gfx.bloom"
 	};
@@ -652,6 +653,19 @@ public class SettingsCatalog
 			AppliesRenderSettings = true,
 			Read = () => Render.ScreenSpaceReflectionQuality.ToString(),
 			Write = value => Render.ScreenSpaceReflectionQuality = ToEnum<EffectQuality>( value )
+		} );
+
+		Items.Add( new SettingItem
+		{
+			Id = "gfx.ssgi",
+			Category = "graphics",
+			Section = "#menu.settings.post_processing",
+			Title = "#menu.settings.screen_space_global_illumination",
+			Description = "#menu.settings.gfx.ssgi.description",
+			Options = EffectLevels,
+			AppliesRenderSettings = true,
+			Read = () => Render.ScreenSpaceGlobalIlluminationQuality.ToString(),
+			Write = value => Render.ScreenSpaceGlobalIlluminationQuality = ToEnum<EffectQuality>( value )
 		} );
 
 		Items.Add( new SettingItem

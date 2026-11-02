@@ -36,6 +36,7 @@ class RenderQualityProfiles
 		SetGroupConVars( "AmbientOcclusionQuality", settings.AmbientOcclusionQuality.ToString() );
 		SetGroupConVars( "DepthOfFieldQuality", settings.DepthOfFieldQuality.ToString() );
 		SetGroupConVars( "ScreenSpaceReflectionQuality", settings.ScreenSpaceReflectionQuality.ToString() );
+		SetGroupConVars( "ScreenSpaceGlobalIlluminationQuality", settings.ScreenSpaceGlobalIlluminationQuality.ToString() );
 		settings.ApplyMotionBlur();
 		settings.ApplyBloom();
 	}

@@ -105,6 +105,7 @@ public class PostProcessingComponentTest
 		CreateAndCycle<HighlightOutline>( scene );
 		CreateAndCycle<MotionBlur>( scene );
 		CreateAndCycle<Pixelate>( scene );
+		CreateAndCycle<ScreenSpaceGlobalIllumination>( scene );
 		CreateAndCycle<Sharpen>( scene );
 		CreateAndCycle<Tonemapping>( scene );
 		CreateAndCycle<Vignette>( scene );
@@ -193,6 +194,9 @@ public class PostProcessingComponentTest
 
 		var pixelate = go.Components.Create<Pixelate>( false );
 		Assert.AreEqual( 0.25f, pixelate.Scale );
+
+		var ssgi = go.Components.Create<ScreenSpaceGlobalIllumination>( false );
+		Assert.AreEqual( 1.0f, ssgi.Intensity );
 
 		var sharpen = go.Components.Create<Sharpen>( false );
 		Assert.AreEqual( 2.0f, sharpen.Scale );
@@ -336,7 +340,8 @@ public class PostProcessingComponentTest
 
 	/// <summary>
 	/// The heavier rendering effects round trip their configuration: ambient occlusion,
-	/// bloom, depth of field, color grading curves, tonemapping and highlight outline.
+	/// bloom, depth of field, color grading curves, tonemapping, highlight outline and
+	/// screen space global illumination.
 	/// ScreenSpaceReflections and Highlight have no serializable settings but survive as
 	/// component presence.
 	/// </summary>
@@ -388,6 +393,9 @@ public class PostProcessingComponentTest
 		outline.InsideColor = Color.Green;
 		outline.Width = 2.0f;
 		outline.OverrideTargets = true;
+
+		var ssgi = go.Components.Create<ScreenSpaceGlobalIllumination>();
+		ssgi.Intensity = 0.5f;
 
 		go.Components.Create<Highlight>();
 
@@ -441,6 +449,10 @@ public class PostProcessingComponentTest
 		Assert.AreEqual( Color.Green, loadedOutline.InsideColor );
 		Assert.AreEqual( 2.0f, loadedOutline.Width );
 		Assert.IsTrue( loadedOutline.OverrideTargets );
+
+		var loadedSsgi = clone.Components.Get<ScreenSpaceGlobalIllumination>();
+		Assert.IsNotNull( loadedSsgi );
+		Assert.AreEqual( 0.5f, loadedSsgi.Intensity );
 
 		Assert.IsNotNull( clone.Components.Get<Highlight>(), "Highlight should survive the round trip" );
 
@@ -628,18 +640,21 @@ public class PostProcessingComponentTest
 	/// transparents, Bloom before post process and ColorGrading after. Tonemapping both
 	/// blits in the dedicated Tonemapping stage and writes the camera's AutoExposure setup
 	/// during the build, the only externally visible side effect of a post process build.
-	/// Quality convars gate AO and DoF entirely.
+	/// Screen space GI grabs the opaque frame for its rays to read and only traces once it
+	/// has one. Quality convars gate AO, SSGI and DoF entirely.
 	/// </summary>
 	[TestMethod]
 	public void ComputeEffectsRegisterLayersAndDriveAutoExposure()
 	{
 		var oldEnable = PostProcessSystem.EnablePostProcess;
 		var oldAoQuality = AmbientOcclusion.UserQuality;
+		var oldGiQuality = ScreenSpaceGlobalIllumination.UserQuality;
 		var oldDofQuality = DepthOfField.Quality;
 		var oldBloom = Bloom.UserEnabled;
 
 		PostProcessSystem.EnablePostProcess = true;
 		AmbientOcclusion.UserQuality = 3;
+		ScreenSpaceGlobalIllumination.UserQuality = 3;
 		DepthOfField.Quality = 3;
 		Bloom.UserEnabled = true;
 
@@ -652,6 +667,7 @@ public class PostProcessingComponentTest
 			var cam = camGo.Components.Create<CameraComponent>();
 
 			camGo.Components.Create<AmbientOcclusion>();
+			camGo.Components.Create<ScreenSpaceGlobalIllumination>();
 			camGo.Components.Create<DepthOfField>();
 			camGo.Components.Create<Bloom>();
 			camGo.Components.Create<ColorGrading>().GradingMethod = ColorGrading.GradingType.TemperatureControl;
@@ -668,6 +684,11 @@ public class PostProcessingComponentTest
 			var aoLayer = FindLayer( cam, Stage.AfterDepthPrepass, "Ambient Occlusion" );
 			Assert.IsNotNull( aoLayer, "AO registers after the depth prepass" );
 			Assert.AreEqual( 0, aoLayer.Order );
+
+			var giGrabLayer = FindLayer( cam, Stage.AfterOpaque, "Global Illumination" );
+			Assert.IsNotNull( giGrabLayer, "SSGI grabs the frame after opaques for next frame's rays to read" );
+			Assert.AreEqual( 0, giGrabLayer.Order );
+			Assert.IsNull( FindLayer( cam, Stage.AfterDepthPrepass, "Global Illumination" ), "Nothing grabbed yet on the first tick, so nothing to trace against" );
 
 			var dofLayer = FindLayer( cam, Stage.AfterTransparent, "Dof" );
 			Assert.IsNotNull( dofLayer, "DoF registers after transparents" );
@@ -701,6 +722,11 @@ public class PostProcessingComponentTest
 
 			Assert.IsNull( FindLayer( cam, Stage.AfterDepthPrepass, "Ambient Occlusion" ), "AO quality 0 skips the effect entirely" );
 
+			ScreenSpaceGlobalIllumination.UserQuality = 0;
+			scene.GameTick();
+
+			Assert.IsNull( FindLayer( cam, Stage.AfterOpaque, "Global Illumination" ), "SSGI quality 0 skips the effect entirely, the grab included" );
+
 			DepthOfField.Quality = 0;
 			scene.GameTick();
 
@@ -710,6 +736,7 @@ public class PostProcessingComponentTest
 		{
 			PostProcessSystem.EnablePostProcess = oldEnable;
 			AmbientOcclusion.UserQuality = oldAoQuality;
+			ScreenSpaceGlobalIllumination.UserQuality = oldGiQuality;
 			DepthOfField.Quality = oldDofQuality;
 			Bloom.UserEnabled = oldBloom;
 		}
