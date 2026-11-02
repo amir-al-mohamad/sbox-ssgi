@@ -920,7 +920,17 @@ void CalculateIndirectLighting( inout LightingTerms_t lightingTerms, const Final
 	// Resolve the existing IBL/lightmap fallback before fading it out under DDGI.
 	if ( ddgi.a > 0.0f )
 		lightingTerms.vIndirectDiffuse.rgb = ddgi.rgb + (1.0f - ddgi.a) * lightingTerms.vIndirectDiffuse.rgb;
-	
+
+	// Screen space GI takes over in the directions its rays could see. Those rays saw what the ambient occlusion would
+	// have darkened, so it is kept for the directions they didn't
+	#if ( !S_TRANSLUCENT )
+	{
+		float4 ssgi = ScreenSpaceGlobalIllumination::Sample( vPositionSS.xy );
+		lightingTerms.vIndirectDiffuse.rgb = ssgi.rgb + (1.0f - ssgi.a) * lightingTerms.vIndirectDiffuse.rgb;
+		lightingTerms.flDynamicAmbientOcclusion = lerp( lightingTerms.flDynamicAmbientOcclusion, 1.0f, ssgi.a );
+	}
+	#endif
+
 	// Apply indirect transmissive lighting
 	lightingTerms.vTransmissive.rgb += vTransmissiveMask.rgb * lightingTerms.vIndirectDiffuse.rgb;
 	

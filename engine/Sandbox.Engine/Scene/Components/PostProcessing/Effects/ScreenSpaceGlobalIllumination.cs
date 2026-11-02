@@ -50,8 +50,9 @@ public sealed class ScreenSpaceGlobalIllumination : BasePostProcess<ScreenSpaceG
 		new( "SSGI Upsample" )
 	];
 
-	// What lives on between frames, at half resolution apart from the result. Owned rather than pooled: a camera's
-	// reservoirs and history are its own
+	// What lives on between frames, at half resolution apart from the result. Owned rather than pooled: the lighting
+	// shader reads the result through the camera's attributes, so its bindless index has to hold from one frame to the
+	// next, and a camera's reservoirs are its own
 	Vector2Int size;
 	Texture[] reservoirHit = new Texture[2];
 	Texture[] reservoirLight = new Texture[2];
@@ -65,6 +66,9 @@ public sealed class ScreenSpaceGlobalIllumination : BasePostProcess<ScreenSpaceG
 	Texture[] result = new Texture[2];
 	int frame;
 
+	// The camera the result is published to, so it can be taken back
+	SceneCamera published;
+
 	protected override void OnEnabled()
 	{
 		base.OnEnabled();
@@ -77,6 +81,7 @@ public sealed class ScreenSpaceGlobalIllumination : BasePostProcess<ScreenSpaceG
 	{
 		base.OnDisabled();
 
+		Unpublish();
 		DisposeTextures();
 	}
 
@@ -95,6 +100,8 @@ public sealed class ScreenSpaceGlobalIllumination : BasePostProcess<ScreenSpaceG
 		var lastFrame = commandsLastFrame.Attributes.GetRenderTarget( "LastFrameColor" )?.ColorTarget;
 		if ( UserQuality <= 0 || lastFrame is null || lastFrame.Width < 2 )
 		{
+			Unpublish();
+
 			// Keep grabbing, the first traced frame wants one
 			if ( UserQuality > 0 )
 				InsertCommandList( commandsLastFrame, Stage.AfterOpaque, 0, "Global Illumination" );
@@ -177,6 +184,7 @@ public sealed class ScreenSpaceGlobalIllumination : BasePostProcess<ScreenSpaceG
 		InsertCommandList( commandsLastFrame, Stage.AfterOpaque, 0, "Global Illumination" );
 		InsertCommandList( commands, Stage.AfterDepthPrepass, int.MaxValue, "Global Illumination" );
 
+		Publish( result[ping] );
 		frame++;
 
 		if ( ShowDebug )
@@ -212,6 +220,25 @@ public sealed class ScreenSpaceGlobalIllumination : BasePostProcess<ScreenSpaceG
 	void Done( Texture texture )
 	{
 		commands.ResourceBarrierTransition( texture, ResourceState.NonPixelShaderResource );
+	}
+
+	// The lighting shader finds the result through the camera's attributes. A pipeline texture slot would be the proper
+	// home, next to AO and SSR, but those are native and there are two
+	void Publish( Texture texture )
+	{
+		var camera = Camera.SceneCamera;
+		if ( camera is null )
+			return;
+
+		camera.Attributes.Set( "ScreenSpaceGIIndex", texture.Index );
+		camera.Attributes.Set( "ScreenSpaceGIViewport", new Vector2( texture.Width, texture.Height ) );
+		published = camera;
+	}
+
+	void Unpublish()
+	{
+		published?.Attributes.Set( "ScreenSpaceGIIndex", 0 );
+		published = null;
 	}
 
 	void EnsureTextures( int width, int height )

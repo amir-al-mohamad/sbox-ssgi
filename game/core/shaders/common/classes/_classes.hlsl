@@ -10,6 +10,7 @@
 #include "common/classes/Fog.hlsl"
 #include "common/classes/DynamicReflections.hlsl"
 #include "common/classes/ScreenSpaceAmbientOcclusion.hlsl"
+#include "common/classes/ScreenSpaceGlobalIllumination.hlsl"
 #include "common/classes/ScreenSpaceTrace.hlsl"
 #include "common/classes/AmbientLight.hlsl"
 #include "common/classes/EnvMap.hlsl"
